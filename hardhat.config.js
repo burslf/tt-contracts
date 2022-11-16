@@ -33,7 +33,7 @@ module.exports = {
   
   etherscan: {
     apiKey: {
-      rinkeby: process.env["ETHERSCAN_API_KEY"]
+      goerli: process.env["ETHERSCAN_API_KEY"]
     }
   },
   networks: {
@@ -41,8 +41,8 @@ module.exports = {
       url: "https://speedy-nodes-nyc.moralis.io/fb1841515bcc2b1e0aed0509/polygon/mumbai/archive",
       accounts: [PK]
     },
-    rinkeby: {
-      url: `https://rinkeby.infura.io/v3/${process.env["INFURA_API_KEY"]}`,
+    goerli: {
+      url: `https://goerli.infura.io/v3/${process.env["INFURA_API_KEY"]}`,
       accounts: [PK]
     },
     xdaichain: {

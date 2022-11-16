@@ -3,7 +3,7 @@ const hre = require("hardhat");
 async function main() {
   const Billeterie = await hre.ethers.getContractFactory("Billeterie");
   const billeterie = await upgrades.deployProxy(Billeterie, 
-    ["0x102BB817B5Acd75d3066B20883a2F917C5677777", "0x1e5f426989B29abAE1413739F1637ac3b1129230"])
+    ["0x102BB817B5Acd75d3066B20883a2F917C5677777", "0x4b0eace8c65ca4f398ff5e3402873461888ccaf9"])
 
 
   await billeterie.deployed();

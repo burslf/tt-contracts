@@ -38,6 +38,20 @@ contract PaymentHandler {
         }
     }
 
+    function getPayees(address _creator, uint _id) public view returns(address[] memory, uint[] memory) {
+        require(payees[_creator][_id].length > 0, "No payee found. Event doesn't exist or payees haven't been set");
+
+        uint _length = payees[_creator][_id].length;
+
+        uint[] memory allshares = new uint[](_length);
+
+        for (uint i = 0; i < _length; i++) {
+            allshares[i] = shares[_creator][_id][payees[_creator][_id][i]];
+        } 
+
+        return (payees[_creator][_id], allshares);
+    }
+
     function releasable(address _creator, uint _id, address _payee) public view returns(uint) {
         require(isPayee[_creator][_id][_payee], "Address is not payee");
         

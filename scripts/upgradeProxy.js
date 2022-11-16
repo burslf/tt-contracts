@@ -12,9 +12,9 @@ async function main() {
   //   await operatorsRegistry.deployed();
   const Billeterie = await ethers.getContractFactory('Billeterie')
 
-  const upgraded = await upgrades.upgradeProxy("0x3aBFE00cf20CbAe6a6873145CA1D9555552CBaaA", Billeterie)
+  const upgraded = await upgrades.upgradeProxy("0x937301d5CA9035948D168fFC6Da3c76CB0b2E91f", Billeterie)
 
-  console.log("Changed");
+  console.log("Changed: ",upgraded);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

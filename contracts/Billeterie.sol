@@ -74,10 +74,10 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
     event EventCreated(
         uint id, 
         address indexed owner,
-        uint optionFees,
         uint initialSupply,
         uint price,
-        uint eventDate
+        uint eventDate,
+        uint optionFees
     );
 
         // Emitted when offchain data is updated
