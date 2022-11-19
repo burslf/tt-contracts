@@ -77,7 +77,8 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
         uint initialSupply,
         uint price,
         uint eventDate,
-        uint optionFees
+        uint optionFees,
+        bool greyMarketAllowed
     );
 
         // Emitted when offchain data is updated
@@ -161,7 +162,8 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
             _eventSupply_Price_Date[0],
             _eventSupply_Price_Date[1],
             _eventSupply_Price_Date[2],
-            _optionFees
+            _optionFees,
+            _greyMarketAllowed
         );
 
         if (bytes(_offchainData).length > 0) {
