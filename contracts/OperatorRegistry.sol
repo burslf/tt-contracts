@@ -16,7 +16,7 @@ contract OperatorsRegistry {
     using Array for address[];
 
     // Is operator mapping checker
-    mapping(address => bool) public _isOperator;
+    mapping(address => bool) public isOperator;
 
     address [] public allOperators;
 
@@ -45,23 +45,23 @@ contract OperatorsRegistry {
     }
 
     function addOperatorInternal(address _address) internal {
-        require(_isOperator[_address] == false, "OperatorsRegistry :: Address is already a operator");
+        require(isOperator[_address] == false, "OperatorsRegistry :: Address is already a operator");
 
         allOperators.push(_address);
-        _isOperator[_address] = true;
+        isOperator[_address] = true;
 
         emit OperatorStatusChanged(_address, true);
     }
 
     function removeOperator(address _operator) external onlyCommittee {
-        require(_isOperator[_operator] == true, "OperatorsRegistry :: Address is not a operator");
+        require(isOperator[_operator] == true, "OperatorsRegistry :: Address is not a operator");
 
         uint length = allOperators.length;
         require(length > 1, "Cannot remove last operator.");
 
         // Use custom array library for removing from array
         allOperators.removeElement(_operator);
-        _isOperator[_operator] = false;
+        isOperator[_operator] = false;
 
         emit OperatorStatusChanged(_operator, false);
     }

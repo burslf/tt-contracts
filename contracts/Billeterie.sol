@@ -26,45 +26,41 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
     string public name;
     // Contract symbol
     string public symbol;
-    // Mappings
+
+
+    /************
+        Mappings 
+     *************/
     
     // Event-Ticketing
-        // Creator address to event offchain data
-    mapping(address => mapping(uint => string)) eventOffchainData;
-        // Creator address to event supply
-    mapping(address => mapping(uint => uint)) eventSupply;
-        // Creator address to event price
-    mapping(address => mapping(uint => uint)) eventPrice;
-        // Creator address to event date
-    mapping(address => mapping(uint => uint)) eventDate;
-        // Creator address to event grey market price
-    mapping(address => mapping(uint => bool)) eventGreyMarketAllowed;
+        // Event ID to event offchain data
+    mapping(uint => string) eventOffchainData;
+        // Event ID to event supply
+    mapping(uint => uint) eventSupply;
+        // Event ID to event price
+    mapping(uint => uint) eventPrice;
+        // Event ID to event date
+    mapping(uint => uint) eventDate;
+        // Event ID to event grey market price
+    mapping(uint => bool) eventGreyMarketAllowed;
 
     // Event-Options
-        // Creator address to event option fees
-    mapping(address => mapping(uint => uint)) eventOptionFees;
-        // Creator address to event total option count
-    mapping(address => mapping(uint => uint)) eventOptionCount;
+        // Event ID to event option fees
+    mapping(uint => uint) eventOptionFees;
+        // Event ID to event total option count
+    mapping(uint => uint) eventOptionCount;
 
     // Options
-        // Creator address to event option count for specific buyer
-    mapping(address => mapping(uint => mapping(address => uint))) public eventOptionAmount;
-        // Creator address to event option duration for specific buyer
-    mapping(address => mapping(uint => mapping(address => uint))) public eventOptionTime;
-        // Creator address to event address that is authorize to perform tx on this option
-    mapping(address => mapping(uint => mapping(address => address))) public eventOptionAllowance;
+        // Event ID to event option count for specific buyer
+    mapping(uint => mapping(address => uint)) public eventOptionAmount;
+        // Event ID to event option duration for specific buyer
+    mapping(uint => mapping(address => uint)) public eventOptionTime;
+        // Event ID to event address that is authorize to perform tx on this option
+    mapping(uint => mapping(address => address)) public eventOptionAllowance;
     
     // General Mappings
-        // Creator to his total revenue
-    // mapping(address => uint) public ownerRevenue;
-    
         // Creator to his total events
-    mapping(address => uint) public totalCreatorEvents;
-
-        // Event ID to his creator address
-    mapping(uint => address) public creatorOfEvent;
-        // Event ID to 
-    mapping(uint => uint) public idOfEvent;
+    mapping(address => uint) public creatorTotalEvents;
 
     // Contract URI
     string public s_contractURI;
@@ -84,12 +80,11 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
         // Emitted when offchain data is updated
     event OffchainDataUpdated(
         uint indexed eventId,
-        string url,
-        uint timestamp
+        uint timestamp,
+        string url
     );
         // Emitted when new option is added to an event
     event OptionAdded(
-        address indexed creator, 
         address indexed optionOwner,
         uint indexed eventId,
         uint amount,
@@ -97,17 +92,14 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
     );
     // Emitted when new option is removed from an event
     event OptionRemoved(
-        address indexed creator, 
         address indexed optionOwner,
         uint indexed eventId,
         uint amount
     );
 
     // Handle grey market price 
-    modifier greyMaketHandler(uint _id, uint _amount) {
-        address eventCreator = creatorOfEvent[_id];
-        uint creatorEventId = idOfEvent[_id];
-        require(eventGreyMarketAllowed[eventCreator][creatorEventId], "Grey market is disallowed for this event.");
+    modifier greyMaketHandler(uint _id) {
+        require(eventGreyMarketAllowed[_id], "Grey market is disallowed for this event.");
         _;
     }
 
@@ -133,31 +125,30 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
     {
         require(_eventSupply_Price_Date.length == 3, "Mismatch in _eventSupply_Price_Date");
 
-        uint newEvent = totalCreatorEvents[msg.sender];
+        uint newEventID = totalEvents;
+
+        // Update eventId to creator address mapping
+        creatorOfEvent[newEventID] = msg.sender;
 
         // Add payees and their shares 
-        addPayees(msg.sender, newEvent, _payees, _shares);
+        addPayees(newEventID, _payees, _shares);
 
         // Update event data
-        eventSupply[msg.sender][newEvent] = _eventSupply_Price_Date[0];
-        eventPrice[msg.sender][newEvent] = _eventSupply_Price_Date[1];
-        eventDate[msg.sender][newEvent] = _eventSupply_Price_Date[2];
-        eventGreyMarketAllowed[msg.sender][newEvent] = _greyMarketAllowed;
+        eventSupply[newEventID] = _eventSupply_Price_Date[0];
+        eventPrice[newEventID] = _eventSupply_Price_Date[1];
+        eventDate[newEventID] = _eventSupply_Price_Date[2];
+        eventGreyMarketAllowed[newEventID] = _greyMarketAllowed;
 
         // If there is no custom fees, put base option fees
         if (_optionFees > 0) {
-            eventOptionFees[msg.sender][newEvent] = _optionFees;
+            eventOptionFees[newEventID] = _optionFees;
         }else{
-            eventOptionFees[msg.sender][newEvent] = baseOptionFees;
+            eventOptionFees[newEventID] = baseOptionFees;
         }
 
 
-        // Update eventId to creator address mapping
-        creatorOfEvent[newEvent] = msg.sender;
-        idOfEvent[totalEvents] = newEvent;
-
         emit EventCreated(
-            totalEvents, 
+            newEventID, 
             msg.sender, 
             _eventSupply_Price_Date[0],
             _eventSupply_Price_Date[1],
@@ -167,44 +158,39 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
         );
 
         if (bytes(_offchainData).length > 0) {
-            eventOffchainData[msg.sender][newEvent] = _offchainData;
-            emit OffchainDataUpdated(totalEvents, _offchainData, block.timestamp);
+            eventOffchainData[newEventID] = _offchainData;
+            emit OffchainDataUpdated(newEventID, block.timestamp, _offchainData);
         }
 
-        totalCreatorEvents[msg.sender] += 1;
+        creatorTotalEvents[msg.sender] += 1;
         totalEvents += 1;
     }
 
 
-    function saveOffchainData(uint _id, string memory _offchainData) public {
-        address eventCreator = creatorOfEvent[_id];
-
-        require(eventCreator == msg.sender, "You are not the event creator");
+    function saveOffchainData(uint _id, string memory _offchainData) public onlyCreator(_id) {
         require(totalEvents >= _id, "Event doesn't exist");
 
-        uint eventId = idOfEvent[_id];
-
         // Update IPFS data for this event
-        eventOffchainData[msg.sender][eventId] = _offchainData;
+        eventOffchainData[_id] = _offchainData;
 
-        emit OffchainDataUpdated(_id, _offchainData, block.timestamp);
+        emit OffchainDataUpdated(_id, block.timestamp, _offchainData);
     }
 
 
-    function mint(address _to, address _creator, uint _id, uint _amount, bytes memory _data) public payable {        
-        require(totalCreatorEvents[_creator] >= _id, "Event doesn't exist");
-        require(eventSupply[_creator][_id] >= _amount, "No supply for event");
-        require(block.timestamp <= eventDate[_creator][_id], "Event date is passed");
-        require(msg.value == (eventPrice[_creator][_id] * _amount), "Incorrect ETH amount");
+    function mint(address _to, uint _id, uint _amount, bytes memory _data) public payable {        
+        require(_id < totalEvents, "Event doesn't exist");
+        require(eventSupply[_id] >= _amount, "No supply for event");
+        require(block.timestamp <= eventDate[_id], "Event date is passed");
+        require(msg.value == (eventPrice[_id] * _amount), "Incorrect ETH amount");
 
         // Mint a new ticket for this event
         _mint(_to, _id, _amount, _data);
 
         // Update general event data
-        eventSupply[_creator][_id] -= _amount;
+        eventSupply[_id] -= _amount;
         
         // Update PaymentHandler
-        eventRevenue[_creator][_id] += msg.value;
+        eventRevenue[_id] += msg.value;
 
     }
 
@@ -213,72 +199,71 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
     }
 
 
-    function optionTicket(address _creator, uint _id, uint _amount, uint _optionDuration) public payable {   
-        require(totalCreatorEvents[_creator] >= _id, "Event doesn't exist");
+    function optionTicket(uint _id, uint _amount, uint _optionDuration) public payable {   
+        require(_id < totalEvents, "Event doesn't exist");
 
         // Timestamp for the option from the moment the user call the function
         uint optionTimestamp = block.timestamp + (60 * 60 * _optionDuration);
-        require(optionTimestamp <= eventDate[_creator][_id], "Event date is passed");
+        require(optionTimestamp <= eventDate[_id], "Event date is passed");
 
         // Get option fee price for this event
-        uint optionFees = eventOptionFees[_creator][_id];
-        uint optionPrice = (eventPrice[_creator][_id] * optionFees * _optionDuration * _amount) / 100;
+        uint optionFees = eventOptionFees[_id];
+        uint optionPrice = (eventPrice[_id] * optionFees * _optionDuration * _amount) / 100;
         
         require(msg.value >= optionPrice, "Not enough ETH");
-        require(eventSupply[_creator][_id] >= _amount, "Amount would exceed ticket supply !");
+        require(eventSupply[_id] >= _amount, "Amount would exceed ticket supply !");
         
         // Update option data for this event
-        eventOptionAmount[_creator][_id][msg.sender] += _amount;
-        eventOptionAllowance[_creator][_id][msg.sender] = msg.sender;
-        eventOptionTime[_creator][_id][msg.sender] = optionTimestamp;
-        eventOptionCount[_creator][_id] += _amount;
+        eventOptionAmount[_id][msg.sender] += _amount;
+        eventOptionAllowance[_id][msg.sender] = msg.sender;
+        eventOptionTime[_id][msg.sender] = optionTimestamp;
+        eventOptionCount[_id] += _amount;
         
         // Update general event data
-        eventSupply[_creator][_id] -= _amount;
-        // ownerRevenue[_creator] += msg.value;
+        eventSupply[_id] -= _amount;
+        // ownerRevenue += msg.value;
 
-        emit OptionAdded(_creator, msg.sender, _id, _amount, optionTimestamp);
+        emit OptionAdded(msg.sender, _id, _amount, optionTimestamp);
     }
     
 
-    function removeOption(address _creator, uint _id, address _to, uint _amount) public {
-        require(totalCreatorEvents[_creator] >= _id, "Event doesn't exist");
-        require(eventOptionAllowance[_creator][_id][_to] == msg.sender || operatorsRegistry.isOperator(msg.sender), "Not allowed");
-        require(eventOptionAmount[_creator][_id][_to] >= _amount, "No option to remove");
-        require(block.timestamp < eventOptionTime[_creator][_id][_to], "Too late to remove the option");
+    function removeOption(uint _id, address _to, uint _amount) public {
+        require(_id < totalEvents, "Event doesn't exist");
+        require(eventOptionAllowance[_id][_to] == msg.sender || operatorsRegistry.isOperator(msg.sender), "Not allowed");
+        require(eventOptionAmount[_id][_to] >= _amount, "No option to remove");
+        require(block.timestamp < eventOptionTime[_id][_to], "Too late to remove the option");
         
-        eventSupply[_creator][_id] += _amount;
-        eventOptionAmount[_creator][_id][_to] -= _amount;
-        eventOptionCount[_creator][_id] -= _amount;
+        eventSupply[_id] += _amount;
+        eventOptionAmount[_id][_to] -= _amount;
+        eventOptionCount[_id] -= _amount;
 
-        emit OptionRemoved(_creator, _to, _id, _amount);
+        emit OptionRemoved(_to, _id, _amount);
     }
 
 
     function eventInfo(uint _id) public view returns(address _eventCreator, uint _eventDate, uint _eventPrice, uint _optionFees, uint _currentSupply, string memory _offchainData) {        
         address eventCreator = creatorOfEvent[_id];
-        uint eventId = idOfEvent[_id];
-
+ 
         require(totalEvents >= _id, "Event doesn't exist");
 
         return (eventCreator, 
-                eventDate[eventCreator][eventId], 
-                eventPrice[eventCreator][eventId], 
-                eventOptionFees[eventCreator][eventId], 
-                eventSupply[eventCreator][eventId], 
-                eventOffchainData[eventCreator][eventId]
+                eventDate[_id], 
+                eventPrice[_id], 
+                eventOptionFees[_id], 
+                eventSupply[_id], 
+                eventOffchainData[_id]
         );
     }
     
 
     function ownerRevenue(address _creator) public view returns (uint) {
-        require(totalCreatorEvents[_creator] > 0, "No event for this address");
+        require(creatorTotalEvents[_creator] > 0, "No event for this address");
 
         uint totalRevenue = 0;
-        uint _totalCreatorEvents = totalCreatorEvents[_creator];
+        uint _creatorTotalEvents = creatorTotalEvents[_creator];
         
-        for (uint i; i < _totalCreatorEvents; i++) {
-            uint revenue = eventRevenue[_creator][i];
+        for (uint i; i < _creatorTotalEvents; i++) {
+            uint revenue = eventRevenue[i];
             totalRevenue += revenue;
         }
 
@@ -289,8 +274,7 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
     function uri(uint256 _id) public view override returns (string memory) {
         require(totalEvents >= _id, "NONEXISTENT_TOKEN");
 
-        address creator = creatorOfEvent[_id];
-        string memory tokenUri = eventOffchainData[creator][_id];
+        string memory tokenUri = eventOffchainData[_id];
         
         return tokenUri;
     }
@@ -301,8 +285,8 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
         uint256 _id, 
         uint256 _amount, 
         bytes memory _data
-    ) 
-        public override greyMaketHandler(_id, _amount)
+    )
+        public override greyMaketHandler(_id)
     {
         require(_from == _msgSender() || isApprovedForAll(_from, _msgSender()), "ERC1155: caller is not token owner nor approved");
 
