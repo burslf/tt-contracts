@@ -210,7 +210,7 @@ contract Billeterie is Initializable, ERC1155Upgradeable, TicketrustMiddleware, 
         uint optionFees = eventOptionFees[_id];
         uint optionPrice = (eventPrice[_id] * optionFees * _optionDuration * _amount) / 100;
         
-        require(msg.value >= optionPrice, "Not enough ETH");
+        require(msg.value == optionPrice, "Incorrect ETH amount");
         require(eventSupply[_id] >= _amount, "Amount would exceed ticket supply !");
         
         // Update option data for this event
